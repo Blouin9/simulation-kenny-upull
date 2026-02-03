@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Caissier - Kenny U-Pull</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        :root{--dark:#1a1a2e;--accent:#e94560;--blue:#0f3460;--light:#eaeaea;--bg:#16213e;--cyan:#00d9ff;--orange:#ffa500;}
+        html,body{height:100%;overflow:hidden;}
+        body{font-family:'Roboto',sans-serif;background:linear-gradient(135deg,var(--dark),var(--bg));color:var(--light);}
+        .app{height:100vh;display:flex;flex-direction:column;max-width:1600px;margin:0 auto;padding:8px 15px;}
+        .header{text-align:center;padding:5px 0;flex-shrink:0;}
+        .header h1{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--accent);letter-spacing:2px;}
+        .header p{font-size:11px;color:var(--cyan);text-transform:uppercase;letter-spacing:1px;}
+
+        .config{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;overflow-y:auto;}
+        .config-inner{max-width:1000px;width:100%;background:rgba(15,52,96,0.25);border:1px solid var(--blue);border-radius:15px;padding:20px 25px;}
+        .config h2{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--accent);margin-bottom:10px;}
+        .lang-toggle{display:flex;gap:10px;justify-content:center;margin-bottom:15px;}
+        .lang-btn{padding:7px 28px;border:2px solid var(--accent);background:transparent;color:var(--light);border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer;font-family:'Bebas Neue',sans-serif;transition:all 0.3s;}
+        .lang-btn.active{background:var(--accent);border-color:var(--accent);}
+        .client-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0;}
+        .client-card{background:rgba(233,69,96,0.08);border:2px solid rgba(233,69,96,0.4);border-radius:10px;padding:10px 8px;cursor:pointer;transition:all 0.3s;text-align:center;}
+        .client-card:hover{transform:translateY(-3px);box-shadow:0 5px 15px rgba(233,69,96,0.3);border-color:var(--accent);}
+        .client-card.selected{border-color:var(--cyan);background:rgba(0,217,255,0.08);box-shadow:0 3px 15px rgba(0,217,255,0.2);}
+        .client-card .emoji{font-size:28px;}
+        .client-card h3{font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--accent);margin:4px 0 2px;}
+        .client-card p{font-size:10px;margin:1px 0;opacity:0.8;}
+        .api-section{margin-top:15px;text-align:center;}
+        .api-section label{font-size:12px;display:block;margin-bottom:5px;color:var(--cyan);}
+        .api-input{width:100%;max-width:500px;padding:8px 12px;border:1px solid var(--blue);background:rgba(26,26,46,0.5);color:var(--light);border-radius:8px;font-size:13px;font-family:'Roboto',sans-serif;}
+        .api-note{font-size:10px;color:#999;margin-top:5px;}
+        .api-note a{color:var(--cyan);}
+        .btn{padding:10px 35px;border:none;border-radius:8px;font-size:16px;cursor:pointer;font-family:'Bebas Neue',sans-serif;letter-spacing:1px;text-transform:uppercase;}
+        .btn-go{background:var(--accent);color:white;box-shadow:0 3px 15px rgba(233,69,96,0.3);}
+        .btn-go:hover{transform:translateY(-2px);box-shadow:0 5px 20px rgba(233,69,96,0.5);}
+
+        .sim{flex:1;display:grid;grid-template-columns:1fr 240px;gap:8px;min-height:0;animation:fadeIn 0.4s;}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        .main{display:flex;flex-direction:column;gap:6px;min-height:0;}
+
+        .avatar-bar{display:flex;align-items:center;gap:10px;padding:6px 12px;background:rgba(15,52,96,0.4);border:1px solid var(--blue);border-radius:10px;flex-shrink:0;}
+        .avatar{width:40px;height:40px;border-radius:50%;border:2px solid var(--accent);background:var(--dark);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;transition:all 0.3s;}
+        .avatar.typing{animation:pulse 0.8s infinite;box-shadow:0 0 15px rgba(233,69,96,0.6);}
+        @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+        .av-name{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--accent);}
+        .av-type{font-size:10px;opacity:0.7;}
+        .status{margin-left:auto;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:bold;text-transform:uppercase;white-space:nowrap;}
+        .status.st-typing{background:rgba(0,217,255,0.2);border:1px solid var(--cyan);color:var(--cyan);animation:blink 1s infinite;}
+        .status.st-waiting{background:rgba(233,69,96,0.2);border:1px solid var(--accent);color:var(--accent);animation:blink 1.5s infinite;}
+        .status.st-idle{background:rgba(100,100,100,0.2);border:1px solid #666;color:#999;}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0.5}}
+
+        .chat{flex:1;min-height:0;overflow-y:auto;background:rgba(15,52,96,0.2);border:1px solid var(--blue);border-radius:10px;padding:8px;}
+        .chat::-webkit-scrollbar{width:5px;}
+        .chat::-webkit-scrollbar-thumb{background:var(--accent);border-radius:5px;}
+        .msg{margin-bottom:6px;animation:slideIn 0.3s;}
+        @keyframes slideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        .bubble{padding:5px 9px;border-radius:8px;max-width:85%;display:inline-block;font-size:12px;line-height:1.3;}
+        .msg.client .bubble{background:linear-gradient(135deg,var(--accent),#ff6b7a);float:left;border-bottom-left-radius:2px;}
+        .msg.caissier .bubble{background:linear-gradient(135deg,var(--cyan),#00b8d4);float:right;border-bottom-right-radius:2px;}
+        .msg.system .bubble{background:rgba(255,165,0,0.12);border:1px solid var(--orange);float:none;display:block;text-align:center;max-width:100%;font-size:11px;}
+        .msg.feedback .bubble{background:rgba(100,100,100,0.15);border:1px solid #555;float:none;display:block;max-width:100%;font-size:10px;color:#bbb;text-align:right;}
+        .msg-lbl{font-weight:bold;font-size:9px;margin-bottom:1px;opacity:0.8;text-transform:uppercase;}
+
+        .input-area{display:flex;gap:6px;flex-shrink:0;}
+        .input-area textarea{flex:1;padding:8px 10px;border:1px solid var(--blue);background:rgba(26,26,46,0.5);color:var(--light);border-radius:8px;font-size:12px;font-family:'Roboto',sans-serif;resize:none;line-height:1.3;}
+        .input-area textarea:focus{outline:none;border-color:var(--cyan);}
+        .input-area textarea:disabled{opacity:0.4;}
+        .send-btn{padding:8px 18px;background:var(--accent);color:white;border:none;border-radius:8px;cursor:pointer;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px;transition:all 0.2s;align-self:stretch;}
+        .send-btn:hover{background:#ff6b7a;}
+        .send-btn:disabled{opacity:0.3;cursor:default;}
+
+        .side{display:flex;flex-direction:column;gap:6px;min-height:0;}
+        .panel{background:rgba(15,52,96,0.25);border:1px solid var(--blue);border-radius:10px;padding:6px 8px;}
+        .panel h3{font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--accent);margin-bottom:4px;}
+        .steps-panel{flex:1;min-height:0;overflow-y:auto;}
+        .steps-panel::-webkit-scrollbar{width:4px;}
+        .steps-panel::-webkit-scrollbar-thumb{background:var(--accent);border-radius:4px;}
+        .stp{padding:2px 5px;margin:1px 0;border-radius:4px;background:rgba(26,26,46,0.3);border-left:3px solid transparent;font-size:10px;display:flex;align-items:center;gap:4px;}
+        .stp.done{border-left-color:var(--cyan);background:rgba(0,217,255,0.06);opacity:0.6;}
+        .stp.done::before{content:'✓';color:var(--cyan);font-size:9px;font-weight:bold;}
+        .stp.trans{border-left-color:var(--orange);background:rgba(255,165,0,0.06);font-style:italic;}
+        .score-block{text-align:center;padding:3px 0;}
+        .score-val{font-size:20px;font-weight:bold;color:var(--cyan);}
+        .score-sub{font-size:10px;color:#999;margin-top:2px;}
+        .ctrl{padding:5px;border:1px solid var(--blue);background:transparent;color:var(--light);border-radius:5px;cursor:pointer;font-size:11px;font-weight:bold;width:100%;margin-bottom:4px;}
+        .ctrl:hover{background:rgba(15,52,96,0.4);border-color:var(--cyan);}
+
+        .yard{text-align:center;padding:20px;}
+        .yard h3{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--orange);margin-bottom:8px;}
+        .yard p{font-size:13px;margin-bottom:12px;}
+
+        .endz{flex:1;display:flex;align-items:center;justify-content:center;}
+        .end-inner{text-align:center;background:rgba(15,52,96,0.3);border:1px solid var(--blue);border-radius:15px;padding:25px 45px;max-width:500px;}
+        .end-inner h2{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--accent);margin-bottom:8px;}
+        .end-score{font-size:40px;font-weight:bold;color:var(--cyan);margin:8px 0;}
+        .end-steps{font-size:14px;margin:8px 0;color:var(--light);}
+        .end-rating{font-size:16px;padding:6px 20px;border-radius:10px;display:inline-block;margin:10px 0;}
+        .end-rating.excellent{background:rgba(0,217,255,0.12);border:1px solid var(--cyan);color:var(--cyan);}
+        .end-rating.good{background:rgba(0,200,100,0.12);border:1px solid #00c864;color:#00c864;}
+        .end-rating.average{background:rgba(255,165,0,0.12);border:1px solid var(--orange);color:var(--orange);}
+        .end-rating.poor{background:rgba(233,69,96,0.12);border:1px solid var(--accent);color:var(--accent);}
+        .end-list{text-align:left;margin:10px auto;max-width:300px;font-size:12px;}
+        .end-list div{padding:2px 0;}
+        .end-list .ok{color:var(--cyan);}
+        .end-list .miss{color:var(--accent);opacity:0.6;}
+
+        .hidden{display:none!important;}
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="header">
+        <h1>SIMULATION CAISSIER - KENNY U-PULL</h1>
+        <p>Formation Immersive</p>
+    </div>
+    <div id="configScreen" class="config">
+        <div class="config-inner">
+            <div style="text-align:center;">
+                <h2>Langue / Language</h2>
+                <div class="lang-toggle">
+                    <button class="lang-btn active" onclick="setLang('fr')" id="btnFr">Français</button>
+                    <button class="lang-btn" onclick="setLang('en')" id="btnEn">English</button>
+                </div>
+            </div>
+            <h2 id="titleClient">Sélectionnez un client</h2>
+            <div class="client-grid" id="clientGrid"></div>
+            <div class="api-section hidden">
+                <input type="hidden" class="api-input" id="apiKeyInput" value="AIzaSyCCD9P6ZC2CSXNDHqmnTbn3rR5i6djNyNo">
+            </div>
+            <div style="text-align:center;margin-top:15px;">
+                <button class="btn btn-go" onclick="startSim()" id="btnStart">Démarrer</button>
+            </div>
+        </div>
+    </div>
+    <div id="simScreen" class="sim hidden">
+        <div class="main">
+            <div class="avatar-bar">
+                <div class="avatar" id="avatar">👤</div>
+                <div><div class="av-name" id="cName">Client</div><div class="av-type" id="cType"></div></div>
+                <div class="status st-idle" id="status"><span id="statusTxt"></span></div>
+            </div>
+            <div class="chat" id="chat"></div>
+            <div class="input-area" id="inputArea">
+                <textarea id="userInput" rows="2" placeholder="Écrivez votre réponse..." onkeydown="handleKey(event)"></textarea>
+                <button class="send-btn" id="sendBtn" onclick="send()">Envoyer</button>
+            </div>
+        </div>
+        <div class="side">
+            <div class="panel steps-panel"><h3 id="hSteps">Étapes</h3><div id="stepsDiv"></div></div>
+            <div class="panel"><h3 id="hScore">Score</h3><div class="score-block"><div class="score-val" id="scoreVal">-</div><div class="score-sub" id="scoreSub"></div></div></div>
+            <div class="panel"><h3 id="hCtrl">Contrôles</h3><button class="ctrl" onclick="endSim()" id="btnEnd">Terminer</button><button class="ctrl" onclick="location.reload()" id="btnReset">Recommencer</button></div>
+        </div>
+    </div>
+    <div id="endScreen" class="endz hidden"></div>
+</div>
+<script>
+let lang='fr',client=null,apiKey='AIzaSyCCD9P6ZC2CSXNDHqmnTbn3rR5i6djNyNo',history=[],completedSteps=[],totalScore=0,exchanges=0,busy=false,yardDone=false;
+
+const STEP_KEYS=['accueil','carte','vehicule','regles','verification','decharge','admission','directions','marquage','garanties','paiement'];
+
+const clients={
+    fr:[
+        {nom:"Marc Tremblay",emoji:"👨‍💼",type:"Nouveau client",trait:"Coopératif",vehicule:"Honda Civic 2015",pieces:"alternateur",carte:false,
+         desc:"Nouveau client poli et coopératif. Pose des questions pour comprendre. Ne connaît pas le fonctionnement."},
+        {nom:"Sophie Lalonde",emoji:"👩‍💼",type:"Cliente régulière",trait:"Pressée",vehicule:"Hyundai Elantra 2018",pieces:"rétroviseur côté conducteur",carte:true,
+         desc:"Cliente régulière qui connaît la place. Très pressée, veut aller vite. A déjà une carte de récompense."},
+        {nom:"Alexandre Roy",emoji:"👨‍🎓",type:"Nouveau client",trait:"Méfiant",vehicule:"Toyota Corolla 2012",pieces:"démarreur",carte:false,
+         desc:"Nouveau client méfiant et sceptique. Questionne tout, veut comprendre avant de faire confiance. Pense qu'on essaie de l'arnaquer."},
+        {nom:"Marie Gagnon",emoji:"👵",type:"Cliente régulière",trait:"Bavarde",vehicule:"Ford Escape 2016",pieces:"plaquettes de frein",carte:true,
+         desc:"Cliente régulière très bavarde. Parle beaucoup de son défunt mari qui venait ici. Gentille mais prend du temps. A une carte."},
+        {nom:"Richard Bouchard",emoji:"😤",type:"Client régulier",trait:"Mécontent des prix",vehicule:"Dodge Ram 2014",pieces:"radiateur",carte:false,
+         desc:"Client régulier qui trouve que les prix ont trop monté. Grognon mais fidèle. N'a pas encore la carte de récompense (nouveau système)."}
+    ],
+    en:[
+        {nom:"Mike Johnson",emoji:"👨‍💼",type:"New customer",trait:"Cooperative",vehicule:"2015 Honda Civic",pieces:"alternator",carte:false,
+         desc:"New, polite and cooperative customer. Asks questions to understand. Doesn't know how it works."},
+        {nom:"Sarah Williams",emoji:"👩‍💼",type:"Regular customer",trait:"In a hurry",vehicule:"2018 Hyundai Elantra",pieces:"driver side mirror",carte:true,
+         desc:"Regular customer who knows the place. Very rushed. Already has a rewards card."},
+        {nom:"Alex Thompson",emoji:"👨‍🎓",type:"New customer",trait:"Skeptical",vehicule:"2012 Toyota Corolla",pieces:"starter",carte:false,
+         desc:"New, skeptical customer. Questions everything, needs trust. Thinks he might get scammed."},
+        {nom:"Grace Miller",emoji:"👵",type:"Regular customer",trait:"Chatty",vehicule:"2016 Ford Escape",pieces:"brake pads",carte:true,
+         desc:"Very chatty regular customer. Talks a lot about her late husband. Kind but slow. Has a card."},
+        {nom:"Rick Morrison",emoji:"😤",type:"Regular customer",trait:"Unhappy with prices",vehicule:"2014 Dodge Ram",pieces:"radiator",carte:false,
+         desc:"Regular customer who thinks prices went up too much. Grumpy but loyal. Doesn't have the rewards card yet (new system)."}
+    ]
+};
+
+const tr={
+    fr:{
+        steps:["Accueil","Carte fidélité","Véhicule","Règles","Vérification sacs","Décharge","Admission 5$","Directions/chariot","Marquage pièces","Garanties","Paiement"],
+        stepsYard:"--- Cour ---",
+        typing:"Le client réfléchit...",waiting:"À votre tour",
+        titleClient:"Sélectionnez un client",btnStart:"Démarrer",
+        hSteps:"Procédures",hScore:"Score",hCtrl:"Contrôles",
+        btnEnd:"Terminer",btnReset:"Recommencer",
+        intro:"Un client entre dans la succursale. Que faites-vous?",
+        placeholder:"Écrivez ce que vous dites au client...",
+        send:"Envoyer",
+        yardTitle:"Le client est dans la cour...",yardText:"Il cherche ses pièces.",yardBtn:"Le client revient",
+        yardBack:"Le client revient de la cour avec ses pièces.",
+        endTitle:"Simulation Terminée!",endRestart:"Recommencer",
+        endAvg:"Score moyen",endSteps:"Procédures complétées",
+        rExcellent:"Excellent! Service exemplaire!",rGood:"Bon travail! Quelques points à améliorer.",
+        rAverage:"Passable. Revoyez les procédures.",rPoor:"Formation supplémentaire nécessaire.",
+        errApi:"Erreur API. Vérifiez votre clé.",errEmpty:"Entrez une clé API et sélectionnez un client."
+    },
+    en:{
+        steps:["Greeting","Rewards card","Vehicle","Rules","Bag check","Waiver","$5 Admission","Directions/cart","Parts tagging","Warranties","Payment"],
+        stepsYard:"--- Yard ---",
+        typing:"Client is thinking...",waiting:"Your turn",
+        titleClient:"Select a client",btnStart:"Start",
+        hSteps:"Procedures",hScore:"Score",hCtrl:"Controls",
+        btnEnd:"End",btnReset:"Restart",
+        intro:"A customer walks into the branch. What do you do?",
+        placeholder:"Type what you say to the customer...",
+        send:"Send",
+        yardTitle:"Client is in the yard...",yardText:"Looking for parts.",yardBtn:"Client returns",
+        yardBack:"The client returns from the yard with parts.",
+        endTitle:"Simulation Complete!",endRestart:"Restart",
+        endAvg:"Average score",endSteps:"Procedures completed",
+        rExcellent:"Excellent! Exemplary service!",rGood:"Good job! Room for improvement.",
+        rAverage:"Average. Review procedures.",rPoor:"Additional training needed.",
+        errApi:"API error. Check your key.",errEmpty:"Enter an API key and select a client."
+    }
+};
+
+function buildPrompt(){
+    const c=client;
+    if(lang==='fr') return `Tu es un simulateur de formation pour caissiers chez Kenny U-Pull, une cour de pièces d'auto usagées en libre-service au Québec.
+
+Tu joues le rôle du CLIENT. Le caissier (l'utilisateur) te sert.
+
+CLIENT:
+- Nom: ${c.nom}
+- Type: ${c.type}
+- Personnalité: ${c.desc}
+- Véhicule: ${c.vehicule}
+- Pièce(s) recherchée(s): ${c.pieces}
+- Carte de récompense: ${c.carte?'OUI, en a déjà une':'NON, n\'en a pas encore'}
+
+PROCÉDURES D'ENTRÉE que le caissier devrait suivre:
+1. "accueil" - Saluer le client, demander son numéro de téléphone pour vérifier le dossier
+2. "carte" - Vérifier/offrir la carte de récompense: gratuite, accumule 1$ par admission + montant sur achats, utilisable immédiatement. Besoin du courriel pour inscription.
+3. "vehicule" - Demander quel véhicule, vérifier inventaire, imprimer liste avec rangées (le plus récent en haut)
+4. "regles" - Jacks, torches et grinders interdits. 18 ans minimum. Apporter ses outils.
+5. "verification" - Expliquer wheelstands (véhicules déjà levés, pas besoin de jack). Chèvre (levier à pallan) disponible gratuitement. Vérifier sacs du client pour items interdits. Demander pièces personnelles à marquer.
+6. "decharge" - Faire signer la décharge de responsabilité (standard, pièces retirées aux risques du client)
+7. "admission" - 5$ par personne, valide toute la journée (sortir/revenir OK). Accepte comptant, débit, crédit.
+8. "directions" - Offrir un chariot à l'entrée de la cour. Remettre la liste avec rangées.
+
+Quand les étapes d'entrée sont suffisamment couvertes → "transition": true
+
+PROCÉDURES DE SORTIE (après retour de la cour):
+9. "marquage" - Déposer pièces sur comptoir, les marquer (pour dossier et garantie)
+10. "garanties" - Garantie base 15 jours. Garantie prolongée 90 jours (couvre bris accidentel, remboursé sur carte cadeau sans expiration). Offrir produits additionnels (antigel, liquides...).
+11. "paiement" - Rappeler accumulation carte récompense (1$ entrée + montant achats). Offrir d'utiliser le solde. Procéder au paiement.
+
+Quand les étapes de sortie sont terminées → "fin": true
+
+RÈGLES:
+- Parle en français québécois naturel et conversationnel. Utilise des expressions courantes du Québec (ex: "ben", "tsé", "fait que", "c'est beau", "pas pire").
+- Reste toujours dans ton personnage. Tes réponses doivent sonner comme une vraie conversation, pas comme un script.
+- Fais des réponses COURTES et naturelles (1-3 phrases max), comme un vrai client parlerait.
+- Ne donne JAMAIS les réponses au caissier, ne lui dis pas quoi faire.
+- Si le caissier oublie une étape, guide-le subtilement comme un vrai client le ferait (ex: "Vous vérifiez pas mes sacs?", "Y'a-tu une garantie?").
+- Si le caissier donne de fausses infos ou est impoli, réagis négativement selon ta personnalité.
+- Score 0-2: inapproprié/faux. 3-4: minimal. 5-6: acceptable. 7-8: bon. 9-10: excellent.
+- "etapes" = liste de TOUTES les étapes correctement complétées jusqu'à maintenant.
+- Un message du caissier peut couvrir plusieurs étapes à la fois.`;
+
+    return `You are a training simulator for cashiers at Kenny U-Pull, a self-serve used auto parts yard in Quebec.
+
+You play the role of the CUSTOMER. The cashier (user) is serving you.
+
+CUSTOMER:
+- Name: ${c.nom}
+- Type: ${c.type}
+- Personality: ${c.desc}
+- Vehicle: ${c.vehicule}
+- Part(s) needed: ${c.pieces}
+- Rewards card: ${c.carte?'YES, already has one':'NO, doesn\'t have one yet'}
+
+ENTRY PROCEDURES the cashier should follow:
+1. "accueil" - Greet customer, ask phone number to check file
+2. "carte" - Check/offer rewards card: free, earns $1/visit + money on purchases, usable immediately. Need email to sign up.
+3. "vehicule" - Ask which vehicle, check inventory, print list with row locations (newest on top)
+4. "regles" - Jacks, torches and grinders banned. Must be 18+. Bring your tools.
+5. "verification" - Explain wheelstands (cars already raised). Free engine hoist available. Check bags for prohibited items. Ask about personal parts to tag.
+6. "decharge" - Have customer sign liability waiver (standard, parts removed at own risk)
+7. "admission" - $5/person, valid all day (can leave/return). Cash, debit or credit.
+8. "directions" - Offer cart at yard entrance. Give list with rows.
+
+When entry steps sufficiently covered → "transition": true
+
+EXIT PROCEDURES (after return from yard):
+9. "marquage" - Put parts on counter, tag them (for file and warranty)
+10. "garanties" - 15-day base warranty. 90-day extended (covers accidental damage, refunded on gift card, never expires). Offer additional products (antifreeze, fluids...).
+11. "paiement" - Remind rewards card accumulation ($1 at entry + purchase amount). Offer to use balance. Process payment.
+
+When exit steps done → "fin": true
+
+RULES:
+- Speak natural, conversational English. Use casual expressions like a real customer would.
+- Stay in character at all times. Your responses should sound like a real conversation, not a script.
+- Keep responses SHORT and natural (1-3 sentences max), like a real customer would talk.
+- NEVER give answers to the cashier or tell them what to do.
+- If cashier forgets a step, subtly guide like a real customer would (e.g., "Aren't you checking my bags?", "Is there a warranty?").
+- If cashier gives false info or is rude, react negatively according to your personality.
+- Score 0-2: inappropriate/wrong. 3-4: minimal. 5-6: acceptable. 7-8: good. 9-10: excellent.
+- "etapes" = list of ALL steps correctly completed so far.
+- One cashier message can cover multiple steps.`;
+}
+
+// ─── INIT ───
+function init(){
+    const saved=localStorage.getItem('gemini_key');
+    if(saved) document.getElementById('apiKeyInput').value=saved;
+    displayGrid();updateUI();
+}
+function setLang(l){
+    lang=l;
+    document.getElementById('btnFr').classList.toggle('active',l==='fr');
+    document.getElementById('btnEn').classList.toggle('active',l==='en');
+    displayGrid();updateUI();
+}
+function updateUI(){
+    const t=tr[lang];
+    document.getElementById('titleClient').textContent=t.titleClient;
+    document.getElementById('btnStart').textContent=t.btnStart;
+    document.getElementById('userInput').placeholder=t.placeholder;
+    document.getElementById('sendBtn').textContent=t.send;
+    if(!document.getElementById('simScreen').classList.contains('hidden')){
+        document.getElementById('hSteps').textContent=t.hSteps;
+        document.getElementById('hScore').textContent=t.hScore;
+        document.getElementById('hCtrl').textContent=t.hCtrl;
+        document.getElementById('btnEnd').textContent=t.btnEnd;
+        document.getElementById('btnReset').textContent=t.btnReset;
+    }
+}
+function displayGrid(){
+    document.getElementById('clientGrid').innerHTML=clients[lang].map((c,i)=>`
+        <div class="client-card" id="cc${i}" onclick="selClient(${i})">
+            <div class="emoji">${c.emoji}</div>
+            <h3>${c.nom}</h3>
+            <p>${c.type}</p>
+            <p><em>${c.trait}</em></p>
+        </div>`).join('');
+}
+function selClient(i){
+    document.querySelectorAll('.client-card').forEach(c=>c.classList.remove('selected'));
+    document.getElementById('cc'+i).classList.add('selected');
+    client=clients[lang][i];
+}
+
+// ─── START ───
+function startSim(){
+    if(!client){alert(lang==='fr'?'Sélectionnez un client.':'Select a client.');return;}
+    document.getElementById('configScreen').classList.add('hidden');
+    document.getElementById('simScreen').classList.remove('hidden');
+    document.getElementById('endScreen').classList.add('hidden');
+    history=[];completedSteps=[];totalScore=0;exchanges=0;busy=false;yardDone=false;
+    document.getElementById('chat').innerHTML='';
+    document.getElementById('avatar').textContent=client.emoji;
+    document.getElementById('cName').textContent='Client';
+    document.getElementById('cType').textContent=client.type;
+    document.getElementById('scoreVal').textContent='-';
+    document.getElementById('scoreSub').textContent='';
+    updateSteps();updateUI();
+    addMsg('system',tr[lang].intro);
+    setStatus('waiting');
+    document.getElementById('userInput').focus();
+}
+
+// ─── UI HELPERS ───
+function addMsg(who,txt){
+    const c=document.getElementById('chat');
+    const d=document.createElement('div');
+    d.className='msg '+who;
+    let lbl='';
+    if(who==='client') lbl=`${client.emoji} ${client.nom}`;
+    else if(who==='caissier') lbl=lang==='fr'?'💼 Vous':'💼 You';
+    else if(who==='system') lbl='📋';
+    else if(who==='feedback') lbl='';
+    const lblHtml=lbl?`<div class="msg-lbl">${lbl}</div>`:'';
+    d.innerHTML=`<div class="bubble">${lblHtml}${txt}</div><div style="clear:both"></div>`;
+    c.appendChild(d);c.scrollTop=c.scrollHeight;
+}
+function setStatus(type){
+    const t=tr[lang];
+    const s=document.getElementById('status');
+    const st=document.getElementById('statusTxt');
+    const av=document.getElementById('avatar');
+    if(type==='typing'){s.className='status st-typing';st.textContent=t.typing;av.classList.add('typing');}
+    else if(type==='waiting'){s.className='status st-waiting';st.textContent=t.waiting;av.classList.remove('typing');}
+    else{s.className='status st-idle';st.textContent='';av.classList.remove('typing');}
+}
+function setInputEnabled(on){
+    document.getElementById('userInput').disabled=!on;
+    document.getElementById('sendBtn').disabled=!on;
+    if(on) document.getElementById('userInput').focus();
+}
+function updateSteps(){
+    const t=tr[lang];
+    let html='';
+    for(let i=0;i<8;i++){
+        const done=completedSteps.includes(STEP_KEYS[i]);
+        html+=`<div class="stp ${done?'done':''}">${t.steps[i]}</div>`;
+    }
+    html+=`<div class="stp trans">${t.stepsYard}</div>`;
+    for(let i=8;i<11;i++){
+        const done=completedSteps.includes(STEP_KEYS[i]);
+        html+=`<div class="stp ${done?'done':''}">${t.steps[i]}</div>`;
+    }
+    document.getElementById('stepsDiv').innerHTML=html;
+}
+function updateScore(){
+    const avg=exchanges>0?(totalScore/exchanges).toFixed(1):'-';
+    const done=completedSteps.length;
+    document.getElementById('scoreVal').textContent=avg+'/10';
+    document.getElementById('scoreSub').textContent=`${done}/11 ${lang==='fr'?'étapes':'steps'} · ${exchanges} ${lang==='fr'?'échanges':'exchanges'}`;
+}
+
+// ─── KEYBOARD ───
+function handleKey(e){
+    if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}
+}
+
+// ─── SEND ───
+async function send(){
+    const input=document.getElementById('userInput');
+    const txt=input.value.trim();
+    if(!txt||busy)return;
+    busy=true;
+    input.value='';
+    setInputEnabled(false);
+    addMsg('caissier',txt);
+    setStatus('typing');
+
+    try{
+        const data=await callGemini(txt);
+        handleResponse(data);
+    }catch(e){
+        console.error(e);
+        setStatus('idle');
+        addMsg('system','⚠ '+(e.message||tr[lang].errApi));
+        busy=false;
+        setInputEnabled(true);
+    }
+}
+
+// ─── GEMINI API ───
+async function callGemini(text){
+    history.push({role:'user',parts:[{text}]});
+    const body={
+        systemInstruction:{parts:[{text:buildPrompt()}]},
+        contents:history,
+        generationConfig:{temperature:0.8,maxOutputTokens:600,responseMimeType:'application/json'}
+    };
+    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body)
+    });
+    if(!res.ok){
+        history.pop();
+        const err=await res.text();
+        throw new Error(`API ${res.status}: ${err.substring(0,100)}`);
+    }
+    const json=await res.json();
+    const raw=json.candidates?.[0]?.content?.parts?.[0]?.text;
+    if(!raw){history.pop();throw new Error('Empty response');}
+    history.push({role:'model',parts:[{text:raw}]});
+    return parseAI(raw);
+}
+function parseAI(text){
+    let p;
+    try{p=JSON.parse(text);}catch(e){
+        const m=text.match(/\{[\s\S]*\}/);
+        if(m) try{p=JSON.parse(m[0]);}catch(e2){}
+    }
+    if(!p) return{reponse:text,score:5,feedback:'',etapes:[],transition:false,fin:false};
+    return{
+        reponse:p.reponse||p.response||'...',
+        score:typeof p.score==='number'?p.score:5,
+        feedback:p.feedback||'',
+        etapes:Array.isArray(p.etapes)?p.etapes:(Array.isArray(p.steps)?p.steps:[]),
+        transition:!!p.transition,
+        fin:!!p.fin
+    };
+}
+
+// ─── HANDLE RESPONSE ───
+function handleResponse(data){
+    completedSteps=data.etapes;
+    totalScore+=data.score;
+    exchanges++;
+    // Show client name once they introduce themselves
+    if(exchanges===1) document.getElementById('cName').textContent=client.nom;
+    setStatus('idle');
+    addMsg('client',data.reponse);
+    if(data.feedback){
+        const color=data.score>=8?'var(--cyan)':data.score>=5?'var(--orange)':'var(--accent)';
+        addMsg('feedback',`<span style="color:${color}">${data.score}/10</span> — ${data.feedback}`);
+    }
+    updateSteps();
+    updateScore();
+
+    if(data.transition&&!yardDone){
+        setTimeout(()=>showYard(),800);
+    }else if(data.fin){
+        setTimeout(()=>showEnd(),800);
+    }else{
+        busy=false;
+        setInputEnabled(true);
+    }
+}
+
+// ─── YARD ───
+function showYard(){
+    const t=tr[lang];
+    setInputEnabled(false);
+    addMsg('system',t.yardTitle);
+    const chat=document.getElementById('chat');
+    const d=document.createElement('div');
+    d.innerHTML=`<div class="yard"><h3>${t.yardTitle}</h3><p>${t.yardText}</p>
+        <button class="btn btn-go" onclick="backFromYard()" id="yardBtn">${t.yardBtn}</button></div>`;
+    chat.appendChild(d);
+    chat.scrollTop=chat.scrollHeight;
+}
+
+async function backFromYard(){
+    const btn=document.getElementById('yardBtn');
+    if(btn) btn.disabled=true;
+    yardDone=true;
+    const t=tr[lang];
+    addMsg('system',t.yardBack);
+    setStatus('typing');
+    try{
+        const ctx=lang==='fr'
+            ?'[Le client revient de la cour avec ses pièces. Génère son message de retour selon sa personnalité. Ne score pas ce message.]'
+            :'[Customer returns from yard with parts. Generate their return message based on personality. Do not score this.]';
+        const data=await callGemini(ctx);
+        setStatus('idle');
+        addMsg('client',data.reponse);
+        completedSteps=data.etapes||completedSteps;
+        updateSteps();
+        busy=false;
+        setInputEnabled(true);
+    }catch(e){
+        console.error(e);
+        setStatus('idle');
+        addMsg('system','⚠ '+e.message);
+        busy=false;
+        setInputEnabled(true);
+    }
+}
+
+// ─── END ───
+function showEnd(){
+    document.getElementById('simScreen').classList.add('hidden');
+    const t=tr[lang];
+    const avg=exchanges>0?(totalScore/exchanges).toFixed(1):0;
+    const done=completedSteps.length;
+    const pct=((parseFloat(avg)/10)*50+(done/11)*50);
+    let rc,rt;
+    if(pct>=80){rc='excellent';rt=t.rExcellent;}
+    else if(pct>=60){rc='good';rt=t.rGood;}
+    else if(pct>=40){rc='average';rt=t.rAverage;}
+    else{rc='poor';rt=t.rPoor;}
+
+    let stepList='';
+    for(let i=0;i<11;i++){
+        const ok=completedSteps.includes(STEP_KEYS[i]);
+        stepList+=`<div class="${ok?'ok':'miss'}">${ok?'✓':'✗'} ${t.steps[i]}</div>`;
+    }
+
+    const e=document.getElementById('endScreen');
+    e.classList.remove('hidden');
+    e.innerHTML=`<div class="end-inner">
+        <h2>${t.endTitle}</h2>
+        <div style="font-size:40px;margin:5px 0;">${client.emoji}</div>
+        <p style="font-size:14px;">${client.nom}</p>
+        <div class="end-score">${avg}/10</div>
+        <div class="end-steps">${t.endAvg} · ${done}/11 ${t.endSteps}</div>
+        <div class="end-rating ${rc}">${rt}</div>
+        <div class="end-list">${stepList}</div>
+        <button class="btn btn-go" onclick="location.reload()" style="margin-top:10px;">${t.endRestart}</button>
+    </div>`;
+}
+function endSim(){showEnd();}
+init();
+</script>
+</body>
+</html>
